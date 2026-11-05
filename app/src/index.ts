@@ -183,8 +183,15 @@ Backend REST API sistem manajemen gudang dengan pembagian hak akses terstruktur 
 // Jalankan server jika dieksekusi langsung
 if (import.meta.main) {
   initDatabase()
-    .then(() => {
+    .then(async () => {
       console.log("📦 MySQL connected & schema ready.");
+      // Otomatis jalankan migrasi & data seeder setiap kali server deploy/start
+      try {
+        const { seed } = await import("./db/seed");
+        await seed(false);
+      } catch (seedErr: any) {
+        console.warn("⚠️ Auto-seeding info:", seedErr.message || seedErr);
+      }
     })
     .catch((err) => {
       console.warn(

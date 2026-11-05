@@ -2,7 +2,7 @@ import { db, initDatabase, poolConnection } from "./index";
 import { users, UserRole, categories, subCategories, incomingItems } from "./schema";
 import { eq } from "drizzle-orm";
 
-async function seed() {
+export async function seed(closePoolOnFinish = false) {
   console.log("🌱 Running database seeder (MySQL)...");
 
   try {
@@ -249,10 +249,15 @@ async function seed() {
     console.log("🎉 Seeding completed successfully!");
   } catch (error) {
     console.error("❌ Seeding failed:", error);
+    throw error;
   } finally {
-    await poolConnection.end();
-    process.exit(0);
+    if (closePoolOnFinish) {
+      await poolConnection.end();
+      process.exit(0);
+    }
   }
 }
 
-seed();
+if (import.meta.main) {
+  seed(true);
+}
