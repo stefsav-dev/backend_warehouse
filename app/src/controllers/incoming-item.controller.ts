@@ -614,7 +614,20 @@ export const incomingItemController = new Elysia({ prefix: "/incoming-items" })
       // 3. Hitung otomatis Total = Harga * Jumlah Barang (Rupiah)
       const numPrice = Number(body.price);
       const numQuantity = Number(body.quantity);
-      const calculatedTotal = (numPrice * numQuantity).toFixed(2);
+      const totalNum = numPrice * numQuantity;
+      const calculatedTotal = totalNum.toFixed(2);
+
+      // Validasi batas pagu harga sub kategori terhadap Total barang
+      if (Number(subCategoryExists.priceLimit) > 0) {
+        const priceLimit = Number(subCategoryExists.priceLimit);
+        if (totalNum > priceLimit || numPrice > priceLimit) {
+          set.status = 400;
+          return {
+            success: false,
+            message: `Total harga barang (${formatRupiah(totalNum)}) melebihi Batas Harga sub kategori (${formatRupiah(priceLimit)}).`,
+          };
+        }
+      }
 
       // 4. Tanggal Masuk (default hari ini jika tidak disertakan)
       const incomingDateStr =
@@ -801,7 +814,20 @@ export const incomingItemController = new Elysia({ prefix: "/incoming-items" })
       // 4. Hitung ulang total
       const price = body.price !== undefined ? Number(body.price) : Number(existing.price);
       const quantity = body.quantity !== undefined ? Number(body.quantity) : existing.quantity;
-      const calculatedTotal = (price * quantity).toFixed(2);
+      const totalNum = price * quantity;
+      const calculatedTotal = totalNum.toFixed(2);
+
+      // Validasi batas pagu harga sub kategori terhadap Total barang
+      if (Number(subCat.priceLimit) > 0) {
+        const priceLimit = Number(subCat.priceLimit);
+        if (totalNum > priceLimit || price > priceLimit) {
+          set.status = 400;
+          return {
+            success: false,
+            message: `Total harga barang (${formatRupiah(totalNum)}) melebihi Batas Harga sub kategori (${formatRupiah(priceLimit)}).`,
+          };
+        }
+      }
 
       // 5. Update di database
       await db
