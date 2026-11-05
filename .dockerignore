@@ -5,3 +5,4 @@ app/.bun_tmp
 app/.env
 app/.env.*
 !app/.env.example
+

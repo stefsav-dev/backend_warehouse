@@ -19,3 +19,4 @@ ENV NODE_ENV=production
 
 # Jalankan server API
 CMD ["bun", "run", "src/index.ts"]
+
