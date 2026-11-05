@@ -1,171 +1,98 @@
-# Backend Warehouse API (Elysia + Bun + MySQL)
+# Warehouse Management System - Backend API
 
-Backend API untuk Warehouse Management System dengan modul lengkap:
-1. **Autentikasi & RBAC (Admin & Operator)**
-2. **Manajemen User (Paging, Filter Role, Pencarian, Lock/Unlock Akun)**
-3. **Master Data > Kategori**
-4. **Master Data > Sub Kategori**
-5. **Barang Masuk (Incoming Items)**
+Backend RESTful API dengan performa tinggi untuk sistem manajemen pergudangan inventaris barang, otorisasi RBAC (Role-Based Access Control), manajemen pengguna dengan fitur lock/unlock akun, master klasifikasi kategori dengan pagu batas harga, serta pencatatan barang masuk.
 
 ---
 
-## 🚀 Fitur Modul Manajemen User
-
-- **Paging**: Tampilan 10 data per halaman (`?page=1&limit=10`).
-- **Filter Role**: Filter data berdasarkan peran akun (`?role=ADMIN` atau `?role=OPERATOR`).
-- **Pencarian**: Pencarian instan berdasarkan **Username** atau **Nama** (`?search=...`).
-- **Fitur Lock / Unlock User**:
-  - Endpoint: `PATCH /admin/users/:id/lock` dengan body `{ "isLocked": true / false }`.
-  - Jika User di-set **Lock** (`isLocked: true`), maka:
-    1. User tersebut **tidak akan bisa login** ke aplikasi (`403 Forbidden`).
-    2. Seluruh sesi Refresh Token aktif miliknya di database otomatis dicabut (**revoked**).
-    3. Admin yang sedang login dicegah mengunci akunnya sendiri.
-- **Form Tambah / Edit User (Popup Modal)**:
-  - **Role**: Combobox, Wajib dipilih `[Admin, Operator]`.
-  - **Username**: Textbox, Wajib diisi, **unique**, string 8 - 100 karakter.
-  - **Password**: Password, Wajib diisi (saat tambah), string 8 – 100 karakter, **wajib mengandung kombinasi huruf besar, huruf kecil, dan angka**. (Saat edit, bersifat opsional; jika kosong, password lama dipertahankan).
-  - **Nama**: Textbox, Wajib diisi, string 8 – 100 karakter.
-  - **Email**: Textbox, Wajib diisi, string 8 – 100 karakter, berupa format email.
+## 📌 1. Link Deployment (Live App)
+* **Backend API Server (Live)**: [https://backendwarehouse-production.up.railway.app](https://backendwarehouse-production.up.railway.app)
+* **Swagger / OpenAPI Documentation**: [https://backendwarehouse-production.up.railway.app/swagger](https://backendwarehouse-production.up.railway.app/swagger)
+* **OpenAPI JSON Schema**: [https://backendwarehouse-production.up.railway.app/openapi.json](https://backendwarehouse-production.up.railway.app/openapi.json)
+* **Frontend Web Application**: [https://frontendwarehouse-production.up.railway.app/](https://frontendwarehouse-production.up.railway.app/)
 
 ---
 
-## 📋 Daftar Endpoint Modul Manajemen User (`/admin/users`)
-
-| Method | Endpoint | Role | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/admin/users?page=1&limit=10` | Admin Only | Daftar Pengguna (Paging 10 data/halaman) |
-| `GET` | `/admin/users?role=OPERATOR` | Admin Only | Filter pengguna berdasarkan Role (ADMIN/OPERATOR) |
-| `GET` | `/admin/users?search=...` | Admin Only | Pencarian berdasarkan Username atau Nama |
-| `GET` | `/admin/users/:id` | Admin Only | Detail satu akun pengguna |
-| `POST` | `/admin/users` | Admin Only | **Tambah User Baru** (Form Popup Modal) |
-| `PUT` | `/admin/users/:id` | Admin Only | **Ubah Data User** (Form Popup Modal) |
-| `PATCH` | `/admin/users/:id/lock` | Admin Only | **Lock / Unlock User** (Mencegah / Mengizinkan login) |
-| `DELETE` | `/admin/users/:id` | Admin Only | Hapus Akun User |
+## 🎥 2. Link Video Demo
+* **Google Drive Video Demo**: [https://drive.google.com/drive/folders/1T52p3kCWKn2fk6r7CCUp176hlE3Gca-n?usp=sharing](https://drive.google.com/drive/folders/1T52p3kCWKn2fk6r7CCUp176hlE3Gca-n?usp=sharing)
 
 ---
 
-## 📝 Contoh Payload Request & Response
+## 🛠️ 3. Tech Stack yang Digunakan
 
-### 1. Tambah User Baru (`POST /admin/users`)
-**Header:**
-```http
-Authorization: Bearer <adminAccessToken>
-Content-Type: application/json
-```
+### **Backend (API Server)**
+* **Runtime**: Bun (Fast JavaScript & TypeScript runtime)
+* **Framework**: Elysia.js
+* **ORM**: Drizzle ORM
+* **Database Driver**: MySQL2 (Connection Pool)
+* **Keamanan & Kriptografi**:
+  * Argon2id Password Hashing (`Bun.password`)
+  * JWT Access Token + Refresh Token Rotation
+* **Dokumentasi API**: OpenAPI 3.0 / Swagger UI (@elysiajs/swagger)
+* **Bahasa**: TypeScript
 
-**Body Request:**
-```json
-{
-  "role": "OPERATOR",
-  "username": "operator_joko",
-  "password": "Password123",
-  "name": "Joko Susilo Prakoso",
-  "email": "joko.susilo@warehouse.local"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "message": "Pengguna baru dengan role OPERATOR berhasil ditambahkan.",
-  "data": {
-    "id": "f583b211-...",
-    "name": "Joko Susilo Prakoso",
-    "username": "operator_joko",
-    "email": "joko.susilo@warehouse.local",
-    "role": "OPERATOR",
-    "isLocked": false,
-    "createdAt": "2026-11-04T15:38:00.000Z"
-  }
-}
-```
+### **Frontend & Database**
+* **Frontend**: Next.js 15+ (App Router), React 19, Tailwind CSS, Shadcn UI
+* **Database**: MySQL 8.0 (Railway Cloud MySQL)
+* **Cloud Platform**: Railway (Auto-Deployment via Git Webhook)
 
 ---
 
-### 2. Lock User (`PATCH /admin/users/:id/lock`)
-Mengunci akun agar tidak dapat login ke sistem:
+## 💻 4. Petunjuk Instalasi Lokal
 
-**Body Request:**
-```json
-{
-  "isLocked": true
-}
-```
+### **Prasyarat Sistem**
+* [Bun](https://bun.sh/) (v1.1+)
+* Server database MySQL aktif lokal (misal port 3306)
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Akun user 'operator_joko' (Joko Susilo Prakoso) berhasil DIKUNCI (Locked). User tidak dapat login ke aplikasi.",
-  "data": {
-    "id": "f583b211-...",
-    "username": "operator_joko",
-    "isLocked": true
-  }
-}
-```
-
-*Respon saat user yang terkunci mencoba login (`POST /auth/login`):*
-```json
-{
-  "success": false,
-  "message": "Akun Anda telah dikunci (Locked). Anda tidak dapat login ke dalam aplikasi. Silakan hubungi Administrator."
-}
-```
-
----
-
-### 3. Unlock User (`PATCH /admin/users/:id/lock`)
-Membuka kunci akun agar dapat login kembali:
-
-**Body Request:**
-```json
-{
-  "isLocked": false
-}
-```
-
----
-
-### 4. Ambil List User dengan Paging, Filter Role, & Pencarian
-```http
-GET /admin/users?page=1&limit=10&role=OPERATOR&search=Joko
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "f583b211-...",
-      "name": "Joko Susilo Prakoso",
-      "username": "operator_joko",
-      "email": "joko.susilo@warehouse.local",
-      "role": "OPERATOR",
-      "isLocked": false,
-      "createdAt": "2026-11-04T15:38:00.000Z",
-      "updatedAt": "2026-11-04T15:38:00.000Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 1,
-    "totalPages": 1
-  }
-}
-```
-
----
-
-## 🏃 Menjalankan Server & Swagger UI
-
+### **Langkah-Langkah Menjalankan Backend:**
 ```bash
+# 1. Clone repository backend
+git clone https://github.com/stefsav-dev/backend_warehouse.git
 cd backend_warehouse/app
-bun run dev
+
+# 2. Pasang dependensi project
+bun install
+
+# 3. Konfigurasi Environment Variable
+# Buat file .env di dalam folder backend_warehouse/app:
+PORT=3001
+NODE_ENV=development
+DATABASE_URL=mysql://root:password@localhost:3306/warehouse_db
+JWT_SECRET=super_secret_jwt_key_warehouse_2026_dev
+
+# 4. Jalankan Server API
+bun run src/index.ts
 ```
 
-- **Swagger Documentation**: `http://localhost:3000/swagger`
-- **OpenAPI JSON Spec**: `http://localhost:3000/openapi.json`
+> **Catatan Otomatisasi DB:**
+> Saat pertama kali server dijalankan, sistem secara otomatis mengeksekusi `initDatabase()` untuk migrasi tabel MySQL dan menjalankan `seed()` untuk mengisi akun default Admin & Operator beserta sample data kategori jika tabel masih kosong.
+
+---
+
+## 🔑 5. Akun Pengujian (Kredensial)
+
+| Peran (Role) | Username | Password | Deskripsi & Hak Akses |
+| :--- | :--- | :--- | :--- |
+| **Super Administrator** | `admin` | `admin123` | **Akses Penuh**: Manajemen Pengguna (Tambah/Ubah/Kunci Akun), Master Kategori, Master Sub Kategori (Batas Pagu Harga), Monitoring dan Ubah/Hapus Data Barang Masuk seluruh operator. |
+| **Warehouse Operator** | `operator` | `operator123` | **Akses Operasional**: Pencatatan Barang Masuk (Form Append multi-item), filter kategori/tahun, unduh berkas lampiran, dan ringkasan operasional mandiri. |
+| **Operator Lapangan (Budi)** | `operator_budi` | `operator123` | Akun operator tambahan untuk simulasi pencatatan operator lapangan A. |
+| **Operator Lapangan (Siti)** | `operator_siti` | `operator123` | Akun operator tambahan untuk simulasi pencatatan operator lapangan B. |
+
+---
+
+## 📋 Matriks Hak Akses & Modul API
+
+| Modul | Method | Endpoint | Hak Akses | Keterangan |
+| :--- | :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/auth/login` | Public | Login akun & mendapatkan Access + Refresh Token |
+| **Auth** | `POST` | `/auth/refresh` | Public | Refresh token rotation |
+| **Auth** | `POST` | `/auth/logout` | Authenticated | Revoke refresh token aktif |
+| **User Management** | `GET` | `/admin/users` | Admin | List user dengan paging (10/hlm), search, & filter role |
+| **User Management** | `POST` | `/admin/users` | Admin | Tambah akun user baru (Admin/Operator) |
+| **User Management** | `PUT` | `/admin/users/:id` | Admin | Ubah data user |
+| **User Management** | `PATCH` | `/admin/users/:id/lock` | Admin | Kunci/buka akun (Lock mencabut semua refresh token aktif) |
+| **User Management** | `DELETE` | `/admin/users/:id` | Admin | Hapus akun user |
+| **Kategori** | `GET, POST, PUT, DELETE` | `/categories` | Admin (Write) / Auth (Read) | Master klasifikasi kategori |
+| **Sub Kategori** | `GET, POST, PUT, DELETE` | `/sub-categories` | Admin (Write) / Auth (Read) | Master sub kategori beserta batas harga satuan maksimum |
+| **Barang Masuk** | `GET, POST, PUT, DELETE` | `/incoming-items` | Operator & Admin | CRUD pencatatan barang masuk inventaris gudang |
+| **Lampiran Berkas** | `POST` | `/incoming-items/upload` | Operator & Admin | Unggah lampiran surat jalan/faktur (.doc, .docx, .zip) |
+| **Unduh Berkas** | `GET` | `/uploads/:filename` | Authenticated | Akses dan unduh file lampiran |
