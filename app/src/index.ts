@@ -195,11 +195,11 @@ if (import.meta.main) {
       );
     });
 
-  app.listen(config.port, () => {
+  app.listen({ port: config.port, hostname: "0.0.0.0" }, () => {
     console.log(`\n======================================================`);
-    console.log(`🚀 Warehouse API Server running at http://localhost:${config.port}`);
-    console.log(`📑 OpenAPI / Swagger Docs at http://localhost:${config.port}/swagger`);
-    console.log(`📄 OpenAPI JSON Schema at http://localhost:${config.port}/openapi.json`);
+    console.log(`🚀 Warehouse API Server running at http://0.0.0.0:${config.port}`);
+    console.log(`📑 OpenAPI / Swagger Docs at http://0.0.0.0:${config.port}/swagger`);
+    console.log(`📄 OpenAPI JSON Schema at http://0.0.0.0:${config.port}/openapi.json`);
     console.log(`======================================================\n`);
   });
 }

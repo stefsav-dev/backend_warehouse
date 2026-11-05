@@ -1,0 +1,7 @@
+.git
+.gitignore
+app/node_modules
+app/.bun_tmp
+app/.env
+app/.env.*
+!app/.env.example
