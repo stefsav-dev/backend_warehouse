@@ -170,6 +170,48 @@ export async function initDatabase() {
       `);
 
       console.log("✅ MySQL database & tables verified and initialized successfully.");
+
+      // Auto-seed data awal jika tabel users masih kosong (memudahkan deployment Railway/cloud)
+      const [userRows]: any = await conn.query("SELECT COUNT(*) as count FROM users;");
+      if (userRows && userRows[0] && userRows[0].count === 0) {
+        console.log("🌱 Database kosong terdeteksi. Melakukan auto-seeding akun default...");
+        const adminPass = await Bun.password.hash("admin123", { algorithm: "argon2id" });
+        const operatorPass = await Bun.password.hash("operator123", { algorithm: "argon2id" });
+
+        await conn.query(
+          `INSERT INTO users (id, name, username, email, password, role) VALUES 
+          (UUID(), 'Super Administrator', 'admin', 'admin@warehouse.local', ?, 'ADMIN'),
+          (UUID(), 'Warehouse Operator Lapangan', 'operator', 'operator@warehouse.local', ?, 'OPERATOR');`,
+          [adminPass, operatorPass]
+        );
+        console.log("✅ Akun default seeded: admin (admin123) & operator (operator123).");
+      }
+
+      // Auto-seed kategori & sub-kategori jika masih kosong
+      const [catRows]: any = await conn.query("SELECT COUNT(*) as count FROM categories;");
+      if (catRows && catRows[0] && catRows[0].count === 0) {
+        console.log("🌱 Melakukan auto-seeding kategori & sub-kategori default...");
+        const cat1Id = crypto.randomUUID();
+        const cat2Id = crypto.randomUUID();
+
+        await conn.query(
+          `INSERT INTO categories (id, code, name) VALUES 
+          (?, 'KAT-01', 'Elektronik & Gadget'),
+          (?, 'KAT-02', 'Peralatan Kantor (ATK)');`,
+          [cat1Id, cat2Id]
+        );
+
+        await conn.query(
+          `INSERT INTO sub_categories (id, category_id, code, name, price_limit) VALUES 
+          (UUID(), ?, 'SUB-01', 'Komputer & Laptop', 25000000.00),
+          (UUID(), ?, 'SUB-02', 'Smartphone & Tablet', 15000000.00),
+          (UUID(), ?, 'SUB-03', 'Aksesoris & Kabel', 1000000.00),
+          (UUID(), ?, 'SUB-04', 'Kertas & Dokumen', 500000.00),
+          (UUID(), ?, 'SUB-05', 'Alat Tulis Kantor', 200000.00);`,
+          [cat1Id, cat1Id, cat1Id, cat2Id, cat2Id]
+        );
+        console.log("✅ Kategori & sub-kategori default seeded.");
+      }
     } finally {
       conn.release();
     }
