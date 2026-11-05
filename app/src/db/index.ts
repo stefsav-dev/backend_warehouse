@@ -40,6 +40,54 @@ export const poolConnection = mysql.createPool({
 export const db = drizzle(poolConnection, { schema, mode: "default" });
 
 /**
+ * Helper untuk membuat index secara aman di MySQL tanpa error syntax IF NOT EXISTS
+ */
+async function createIndexSafe(
+  conn: any,
+  tableName: string,
+  indexName: string,
+  columns: string
+) {
+  try {
+    const [rows]: any = await conn.query(
+      `SELECT 1 FROM information_schema.statistics 
+       WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?
+       LIMIT 1;`,
+      [tableName, indexName]
+    );
+    if (!rows || rows.length === 0) {
+      await conn.query(`CREATE INDEX \`${indexName}\` ON \`${tableName}\` (${columns});`);
+    }
+  } catch (e) {
+    // Abaikan jika index sudah ada
+  }
+}
+
+/**
+ * Helper untuk menambahkan kolom secara aman di MySQL jika belum ada
+ */
+async function addColumnSafe(
+  conn: any,
+  tableName: string,
+  columnName: string,
+  columnDef: string
+) {
+  try {
+    const [rows]: any = await conn.query(
+      `SELECT 1 FROM information_schema.columns 
+       WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?
+       LIMIT 1;`,
+      [tableName, columnName]
+    );
+    if (!rows || rows.length === 0) {
+      await conn.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${columnDef};`);
+    }
+  } catch (e) {
+    // Abaikan jika kolom sudah ada
+  }
+}
+
+/**
  * Otomatis membuat tabel-tabel di MySQL jika belum ada
  */
 export async function initDatabase() {
@@ -65,11 +113,7 @@ export async function initDatabase() {
       `);
 
       // Migrasi kolom is_locked jika belum ada
-      try {
-        await conn.query(`
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT false AFTER role;
-        `);
-      } catch (e) {}
+      await addColumnSafe(conn, "users", "is_locked", "BOOLEAN NOT NULL DEFAULT false AFTER role");
 
       // 2. Tabel refresh_tokens
       await conn.query(`
@@ -96,11 +140,7 @@ export async function initDatabase() {
       `);
 
       // Migrasi kolom code jika belum ada
-      try {
-        await conn.query(`
-          ALTER TABLE categories ADD COLUMN IF NOT EXISTS code VARCHAR(10) UNIQUE AFTER id;
-        `);
-      } catch (e) {}
+      await addColumnSafe(conn, "categories", "code", "VARCHAR(10) UNIQUE AFTER id");
 
       // 4. Tabel sub_categories (Master Sub Kategori dengan Batas Harga)
       await conn.query(`
@@ -117,11 +157,7 @@ export async function initDatabase() {
       `);
 
       // Migrasi kolom code jika belum ada
-      try {
-        await conn.query(`
-          ALTER TABLE sub_categories ADD COLUMN IF NOT EXISTS code VARCHAR(10) UNIQUE AFTER category_id;
-        `);
-      } catch (e) {}
+      await addColumnSafe(conn, "sub_categories", "code", "VARCHAR(10) UNIQUE AFTER category_id");
 
       // 5. Tabel incoming_items (Data Barang Masuk)
       await conn.query(`
@@ -149,25 +185,13 @@ export async function initDatabase() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 
-      // Index untuk optimasi pencarian & filter
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_categories_code ON categories(code);
-      `);
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_sub_categories_code ON sub_categories(code);
-      `);
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_incoming_category_id ON incoming_items(category_id);
-      `);
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_incoming_sub_category_id ON incoming_items(sub_category_id);
-      `);
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_incoming_operator_id ON incoming_items(operator_id);
-      `);
-      await conn.query(`
-        CREATE INDEX IF NOT EXISTS idx_incoming_date ON incoming_items(incoming_date);
-      `);
+      // Index untuk optimasi pencarian & filter secara aman di MySQL
+      await createIndexSafe(conn, "categories", "idx_categories_code", "code");
+      await createIndexSafe(conn, "sub_categories", "idx_sub_categories_code", "code");
+      await createIndexSafe(conn, "incoming_items", "idx_incoming_category_id", "category_id");
+      await createIndexSafe(conn, "incoming_items", "idx_incoming_sub_category_id", "sub_category_id");
+      await createIndexSafe(conn, "incoming_items", "idx_incoming_operator_id", "operator_id");
+      await createIndexSafe(conn, "incoming_items", "idx_incoming_date", "incoming_date");
 
       console.log("✅ MySQL database & tables verified and initialized successfully.");
     } finally {
