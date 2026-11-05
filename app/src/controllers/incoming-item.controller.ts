@@ -249,13 +249,20 @@ export const incomingItemController = new Elysia({ prefix: "/incoming-items" })
    */
   .get(
     "",
-    async ({ query }) => {
+    async ({ query, user }) => {
       const page = Math.max(1, Number(query.page) || 1);
       const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
       const offset = (page - 1) * limit;
 
       // Kumpulan kondisi filter query
       const conditions = [];
+
+      // Filter Operator: jika role Operator otomatis miliknya sendiri, jika Admin bisa filter by operatorId
+      if (user?.role === UserRole.OPERATOR) {
+        conditions.push(eq(incomingItems.operatorId, user.id));
+      } else if (query.operatorId) {
+        conditions.push(eq(incomingItems.operatorId, query.operatorId));
+      }
 
       // Filter Kategori
       if (query.categoryId) {
@@ -404,6 +411,11 @@ export const incomingItemController = new Elysia({ prefix: "/incoming-items" })
         search: t.Optional(
           t.String({
             description: "Pencarian nama barang, asal barang, atau nomor surat",
+          })
+        ),
+        operatorId: t.Optional(
+          t.String({
+            description: "Filter berdasarkan ID Operator",
           })
         ),
       }),

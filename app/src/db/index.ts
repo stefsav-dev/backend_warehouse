@@ -167,7 +167,7 @@ export async function initDatabase() {
           category_id VARCHAR(36) NOT NULL,
           sub_category_id VARCHAR(36) NOT NULL,
           item_origin VARCHAR(200) NOT NULL,
-          letterNumber VARCHAR(100) NULL,
+          letter_number VARCHAR(100) NULL,
           attachment VARCHAR(255) NULL,
           attachment_original_name VARCHAR(255) NULL,
           item_name VARCHAR(200) NOT NULL,
@@ -184,6 +184,27 @@ export async function initDatabase() {
           CONSTRAINT fk_incoming_sub_category FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id) ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
+
+      // Migrasi aman kolom letter_number jika tabel dibuat dengan kolom camelCase letterNumber
+      try {
+        const [hasCol]: any = await conn.query(
+          "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'incoming_items' AND column_name = 'letter_number';"
+        );
+        if (!hasCol || hasCol.length === 0) {
+          const [hasOldCol]: any = await conn.query(
+            "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'incoming_items' AND column_name = 'letterNumber';"
+          );
+          if (hasOldCol && hasOldCol.length > 0) {
+            await conn.query("ALTER TABLE `incoming_items` CHANGE COLUMN `letterNumber` `letter_number` VARCHAR(100) NULL;");
+            console.log("✅ Migrated column letterNumber -> letter_number in incoming_items");
+          } else {
+            await conn.query("ALTER TABLE `incoming_items` ADD COLUMN `letter_number` VARCHAR(100) NULL AFTER `item_origin`;");
+            console.log("✅ Added column letter_number in incoming_items");
+          }
+        }
+      } catch (err: any) {
+        console.warn("⚠️ Column migration warning for letter_number:", err.message);
+      }
 
       // Index untuk optimasi pencarian & filter secara aman di MySQL
       await createIndexSafe(conn, "categories", "idx_categories_code", "code");

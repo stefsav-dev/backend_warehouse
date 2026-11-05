@@ -1,6 +1,6 @@
 import { db, initDatabase, poolConnection } from "./index";
 import { users, UserRole, categories, subCategories, incomingItems } from "./schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 
 export async function seed(closePoolOnFinish = false) {
   console.log("🌱 Running database seeder (MySQL)...");
@@ -244,6 +244,38 @@ export async function seed(closePoolOnFinish = false) {
       });
 
       console.log("✅ Categories, Sub-categories, and sample Incoming Items seeded.");
+    }
+
+    // Pastikan selalu ada minimal 1 data sample barang masuk jika tabel kosong
+    try {
+      const [totalItemsResult] = await db.select({ count: count() }).from(incomingItems);
+      if (Number(totalItemsResult?.count || 0) === 0 && operatorUser) {
+        const [firstCat] = await db.select().from(categories).limit(1);
+        const [firstSub] = firstCat
+          ? await db.select().from(subCategories).where(eq(subCategories.categoryId, firstCat.id)).limit(1)
+          : [null];
+
+        if (firstCat && firstSub) {
+          const nowYear = new Date().getFullYear();
+          await db.insert(incomingItems).values({
+            id: crypto.randomUUID(),
+            operatorId: operatorUser.id,
+            categoryId: firstCat.id,
+            subCategoryId: firstSub.id,
+            itemOrigin: "PT Sinar Grafika Perkasa",
+            letterNumber: `SJ-${nowYear}/001`,
+            itemName: "Kertas HVS A4 80gr Rim",
+            price: "55000.00",
+            quantity: 20,
+            unit: "Rim",
+            totalPrice: "1100000.00",
+            incomingDate: `${nowYear}-02-15`,
+          });
+          console.log("✅ Sample Incoming Item verified and seeded.");
+        }
+      }
+    } catch (e: any) {
+      console.warn("⚠️ Warning checking sample items:", e.message);
     }
 
     console.log("🎉 Seeding completed successfully!");
