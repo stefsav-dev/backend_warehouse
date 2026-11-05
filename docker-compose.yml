@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: warehouse_mysql
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: warehouse_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - warehouse_mysql_data:/var/lib/mysql
+
+volumes:
+  warehouse_mysql_data:
